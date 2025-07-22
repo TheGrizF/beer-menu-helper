@@ -24,6 +24,15 @@ containers = [
     ('22oz Bottle', 12)
 ]
 
+translation_table = str.maketrans({
+    "’": "'",
+    "‘": "'",
+    "“": '"',
+    "”": '"',
+    "—": "-",
+    "–": "-"
+})
+
 # Search for Beer
 def search_untappd(beer_name: str):
     headers = {
@@ -54,11 +63,11 @@ def search_untappd(beer_name: str):
             print(f"{beer['brewery']} {beer['name']} {beer['abv']}% abv {beer['style']}")
             print(beer['description'])
             return {
-                'beer_name': beer['name'],
-                'brewery': beer['brewery'],
+                'beer_name': beer['name'].translate(translation_table),
+                'brewery': beer['brewery'].translate(translation_table),
                 'abv': beer['abv'],
-                'style': beer['style'],
-                'description': beer['description']
+                'style': beer['style'].translate(translation_table),
+                'description': beer['description'].translate(translation_table)
             }
     else:
         print(f"Error: {response.status_code} - {response.text}")
@@ -101,11 +110,29 @@ def generate_beers(beer_list):
             if cutoff == -1:
                 cutoff = 997
             description = description[:cutoff] + '...'
+
+        output_rows.append({
+            'Name': full_name,
+            'Price': price,
+            'POS Name': pos_name,
+            'Kitchen Name': '',
+            'Description': description,
+            'Calories': '',
+            'SKU': '',
+            'PLU': ''
+        })
+
+    keys = ['Name', 'Price', 'POS Name', 'Kitchen Name',
+            'Description', 'Calories', 'SKU', 'PLU']
+    with open('bulk_add.csv', 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=keys)
+        writer.writeheader()
+        writer.writerows(output_rows)
+    print("\nCSV File 'bulk_add.csv' generated.")
             
 
 example = [
-    ('Lawsons Sip Of Sunshine', 15),
-    ('Sojourn Ten', 10)
+    ('Lawsons Sip Of Sunshine', 85)
 ]
 
 generate_beers(example)
