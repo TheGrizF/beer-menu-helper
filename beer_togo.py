@@ -13,19 +13,19 @@ UTFB_API_URL = 'https://business.untappd.com/api/v1/items/search.json'
 
 # Containers
 containers = [
-    '4-pack 16oz Cans',
-    '4-pack 12oz Cans',
-    '6-pack 12oz Cans',
-    '16oz Can (Single)',
-    '12oz Can (Single)',
-    '375ml Bottle',
-    '500ml Bottle',
-    '750ml Bottle',
-    '22oz Bottle'
+    ('4-pack 16oz Cans', 6),
+    ('4-pack 12oz Cans', 6),
+    ('6-pack 12oz Cans', 4),
+    ('16oz Can (Single)', 24),
+    ('12oz Can (Single)', 24),
+    ('375ml Bottle', 12),
+    ('500ml Bottle', 12),
+    ('750ml Bottle', 12),
+    ('22oz Bottle', 12)
 ]
 
 # Search for Beer
-def search_untappd(beer_name):
+def search_untappd(beer_name: str):
     headers = {
         'Accept': 'application/json'
     }
@@ -38,11 +38,28 @@ def search_untappd(beer_name):
         headers=headers, 
         params=params
     )
+
     if response.status_code == 200:
         data = response.json()
         if data['items']:
-            for beer in data['items']:
-                print(beer['name'])
+            if len(data['items']) == 1:
+                beer = data['items'][0]
+            else:
+                print('Multiple results found')
+                for i, beer in enumerate(data['items']):
+                    print(f"{i+1}) {beer['name']} - {beer['brewery']}")
+                slct = int(input('Selection: ')) - 1
+                beer = (data['items'][slct])
+            print("Storing information:")
+            print(f"{beer['brewery']} {beer['name']} {beer['abv']}% abv {beer['style']}")
+            print(beer['description'])
+            return {
+                'beer_name': beer['name'],
+                'brewery': beer['brewery'],
+                'abv': beer['abv'],
+                'style': beer['style'],
+                'description': beer['description']
+            }
     else:
         print(f"Error: {response.status_code} - {response.text}")
     return
@@ -51,9 +68,41 @@ def generate_beers(beer_list):
     output_rows = []
     for beer in beer_list:
         name, cost = beer
-        print(f'\nProcessing: {name}      Cost per unit: ${cost}')
-        search_untappd(name)
-        
+        print(f'\nProcessing: {name}')
+        beer_info = search_untappd(name)
+        if not beer_info:
+            print(f"Could not find {name} on Untappd.")
+            continue
+    
+        # Handle Container Type
+        print(f'\nPackage type:')
+        for i, pack in enumerate(containers):
+            print(f"{i+1}) {pack[0]}")
+        slct = int(input("Selection: ")) - 1
+        package = containers[slct]
+
+        # Handle Price
+        print(f'Bassed off Case Price: ${cost} with {package[1]} {package[0]} per case')
+        min_p = float(cost / package[1]) * 1.4
+        max_p = float(cost / package[1]) * 1.5
+        print(f'Price range: ${min_p:.2f} - ${max_p:.2f}')
+        price = float(input("Input Price: "))
+
+        # Naming
+        full_name = f"{beer_info['brewery']} {beer_info['beer_name']}"
+        pos_name = ''
+        if len(beer_info['brewery']) > 10:
+            pos_name = f"{beer_info['brewery'].split()[0]} {beer_info['beer_name']}"
+
+        description = (f"{package[0]} {beer_info['abv']}% abv {beer_info['style']}\n"
+                       f"{beer_info['description']}")
+        if len(description) > 1000:
+            cutoff = description.rfind(' ', 0, 1000)
+            if cutoff == -1:
+                cutoff = 997
+            description = description[:cutoff] + '...'
+            
+
 example = [
     ('Lawsons Sip Of Sunshine', 15),
     ('Sojourn Ten', 10)
