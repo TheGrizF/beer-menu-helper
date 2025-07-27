@@ -3,15 +3,17 @@
 Automated tool to streamline product entry into the Toast pos systems and Untappd for Business.
 
 Goals:
-- [ ] Untappd for business API integration
-  - [ ] Beer search functionality
-  - [ ] Handle multiple search responses
-- [ ] Generate Toast-compatible CSV output
-  - [ ] Price calculation
-  - [ ] POS Name for longer entries
-  - [ ] Container size selection (Dropdown?)
+- [x] Untappd for business API integration
+  - [x] Beer search functionality
+  - [x] Handle multiple search responses
+- [x] Generate Toast-compatible CSV output
+  - [x] Price calculation
+  - [x] POS Name for longer entries
+  - [x] Container size selection (Dropdown?)
 - [ ] Push beers directly to Untappd Menus
 - [ ] GUI version
+
+Toast automation was planned, but not currently available with the current Toast API
 
 # Usage
 

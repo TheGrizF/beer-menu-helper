@@ -1,9 +1,13 @@
 import csv
-import math
 import requests
 import os
 from dotenv import load_dotenv
 from requests.auth import HTTPBasicAuth
+
+products = [
+    ('beer name', 10)
+]
+
 
 load_dotenv()
 READ_ONLY_TOKEN = os.getenv('UTFB_READ_ONLY_TOKEN')
@@ -50,6 +54,8 @@ def search_untappd(beer_name: str):
 
     if response.status_code == 200:
         data = response.json()
+        beers = []
+        """
         if data['items']:
             if len(data['items']) == 1:
                 beer = data['items'][0]
@@ -69,9 +75,19 @@ def search_untappd(beer_name: str):
                 'style': beer['style'].translate(translation_table),
                 'description': beer['description'].translate(translation_table)
             }
-    else:
-        print(f"Error: {response.status_code} - {response.text}")
-    return
+            """
+        for beer in data['items']:
+            beers.append({
+                'name': beer['name'].translate(translation_table),
+                'brewery': beer['brewery'].translate(translation_table),
+                'abv': beer['abv'],
+                'style': beer['style'].translate(translation_table),
+                'description': beer['description'].translate(translation_table)
+            })
+            return beers
+        else:
+            print(f"Error: {response.status_code} - {response.text}")
+        return
 
 def generate_beers(beer_list):
     output_rows = []
@@ -103,8 +119,8 @@ def generate_beers(beer_list):
         if len(beer_info['brewery']) > 10:
             pos_name = f"{beer_info['brewery'].split()[0]} {beer_info['beer_name']}"
 
-        description = (f"{package[0]} {beer_info['abv']}% abv {beer_info['style']}\n"
-                       f"{beer_info['description']}")
+        description = (f"\"{package[0]} {beer_info['abv']}% abv {beer_info['style']}\n"
+                       f"{beer_info['description']}\"")
         if len(description) > 1000:
             cutoff = description.rfind(' ', 0, 1000)
             if cutoff == -1:
@@ -122,17 +138,18 @@ def generate_beers(beer_list):
             'PLU': ''
         })
 
+    write_to_csv(output_rows, 'bulk_add.csv')
+
+def write_to_csv(output_rows, filename):
     keys = ['Name', 'Price', 'POS Name', 'Kitchen Name',
             'Description', 'Calories', 'SKU', 'PLU']
-    with open('bulk_add.csv', 'w', newline='', encoding='utf-8') as f:
-        writer = csv.DictWriter(f, fieldnames=keys)
+    with open(filename, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=keys)
         writer.writeheader()
         writer.writerows(output_rows)
-    print("\nCSV File 'bulk_add.csv' generated.")
             
-
 example = [
     ('Lawsons Sip Of Sunshine', 85)
 ]
 
-generate_beers(example)
+# generate_beers(products)
