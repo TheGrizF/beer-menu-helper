@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 load_dotenv()
 READ_ONLY_TOKEN = os.getenv('UTFB_READ_ONLY_TOKEN')
 EMAIL = os.getenv('EMAIL')
-
 UTFB_API_URL = 'https://business.untappd.com/api/v1/items/search.json'
 
 
@@ -40,45 +39,60 @@ class BeerMenuApp:
             ('22oz Bottle', 12)
         ]
         self.beer_entries = []
+        self.added_names = set()
 
-        tk.Label(root, text="Beer Name:").grid(row=0, column=0, padx=5, pady=5)
-        self.beer_name_entry = tk.Entry(root, width=40)
-        self.beer_name_entry.grid(row=0, column=1, padx=5, pady=5)
+        left_frame = tk.Frame(root)
+        left_frame.grid(row=0, column=0, padx=10, pady=10)
 
-        tk.Label(root, text="Container:").grid(row=1, column=0, padx=5, pady=5)
+        tk.Label(left_frame, text="Beer Name:").grid(row=0, column=0, padx=(0, 5), pady=5, sticky='e')
+        self.beer_name_entry = tk.Entry(left_frame, width=40)
+        self.beer_name_entry.grid(row=0, column=1, pady=5, sticky='w')
+
+        tk.Label(left_frame, text="Container:").grid(row=1, column=0, sticky='e')
         self.container_var = tk.StringVar()
         container_options = [c[0] for c in self.containers]
-        self.container_dropdown = ttk.Combobox(root, textvariable=self.container_var, values=container_options)
+        self.container_dropdown = ttk.Combobox(left_frame, textvariable=self.container_var, values=container_options)
         self.container_dropdown.current(0)
-        self.container_dropdown.grid(row=1, column=1, padx=5, pady=5, sticky='w')
+        self.container_dropdown.grid(row=1, column=1, sticky='w')
         self.container_dropdown.bind('<<ComboboxSelected>>', lambda event: self.calculate_suggested_price())
         
-        tk.Label(root, text="Case Cost:").grid(row=2, column=0, padx=5, pady=5)
-        self.case_cost_entry = tk.Entry(root, width=10)
-        self.case_cost_entry.grid(row=2, column=1, padx=5, pady=5, sticky='w')
+        tk.Label(left_frame, text="Case Cost:").grid(row=2, column=0, sticky='e')
+        self.case_cost_entry = tk.Entry(left_frame, width=10)
+        self.case_cost_entry.grid(row=2, column=1, pady=5, sticky='w')
         self.case_cost_entry.bind('<KeyRelease>', lambda event: self.calculate_suggested_price())
 
         self.price_suggestion = tk.StringVar()
-        tk.Label(root, text="Suggested Price:").grid(row=3, column=0, padx=5, pady=5)
-        self.suggestion_label = tk.Label(root, textvariable=self.price_suggestion)
-        self.suggestion_label.grid(row=3, column=1, padx=5, pady=5, sticky='w')
+        tk.Label(left_frame, text="Suggested Price:").grid(row=3, column=0, sticky='e')
+        self.suggestion_label = tk.Label(left_frame, textvariable=self.price_suggestion)
+        self.suggestion_label.grid(row=3, column=1, sticky='w')
 
-        tk.Label(root, text="Set Price ($):").grid(row=4, column=0, padx=5, pady=5)
-        self.price_entry = tk.Entry(root, width=10)
-        self.price_entry.grid(row=4, column=1, padx=5, pady=5, sticky='w')
+        tk.Label(left_frame, text="Set Price ($):").grid(row=4, column=0, sticky='e')
+        self.price_entry = tk.Entry(left_frame, width=10)
+        self.price_entry.grid(row=4, column=1, pady=5, sticky='w')
 
-        self.preview_button = tk.Button(root, text="Preview", command=self.preview_beer)
+        self.preview_button = tk.Button(left_frame, text="Search", command=self.preview_beer)
         self.preview_button.grid(row=5, column=0, pady=10)
 
-        self.add_button = tk.Button(root, text="Add to Bulk List", command=self.add_beer)
+        self.add_button = tk.Button(left_frame, text="Add to Bulk List", command=self.add_beer)
         self.add_button.grid(row=5, column=1, pady=10)
 
-        tk.Label(root, text="Bulk Add Preview:").grid(row=6, column=0, columnspan=2)
-        self.output_text = tk.Text(root, height=10, width=60)
-        self.output_text.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
+        tk.Label(left_frame, text="Preview:").grid(row=6, column=0, columnspan=2)
+        self.output_text = tk.Text(left_frame, height=12, width=60)
+        self.output_text.grid(row=7, column=0, columnspan=2, pady=5)
 
-        self.save_button = tk.Button(root, text="Generate CSV", command=self.save_to_csv)
+        self.save_button = tk.Button(left_frame, text="Generate CSV", command=self.save_to_csv)
         self.save_button.grid(row=8, column=0, columnspan=2, pady=10)
+
+
+        right_frame = tk.Frame(root)
+        right_frame.grid(row=0, column=1, padx=10, sticky='n')
+
+        tk.Label(right_frame, text="Current Beers:").pack()
+        self.added_listbox = tk.Listbox(right_frame, height=25, width=50)
+        self.added_listbox.pack(padx=5, pady=5)
+
+        self.remove_button = tk.Button(right_frame, text="Remove Selected", command=self.remove_selected_entry)
+        self.remove_button.pack(pady=5)
 
     def calculate_suggested_price(self):
         try:
@@ -118,6 +132,9 @@ class BeerMenuApp:
             return []
 
     def preview_beer(self):
+        self.output_text.delete(1.0, tk.END)
+        self.current_preview = None
+
         beer_name = self.beer_name_entry.get()
         beers = self.search_untappd(beer_name)
 
@@ -127,7 +144,7 @@ class BeerMenuApp:
         
         top = beers[0]
         msg = (f"Found {len(beers)} results:"
-               f"{top['brewery']} {top['name']} {top['abv']}% {top['style']}\n"
+               f"{top['brewery']} {top['name']}\n{top['abv']}% {top['style']}\n\n"
                "Use this entry?")
         
         if messagebox.askyesno("Search Result", msg):
@@ -167,7 +184,7 @@ class BeerMenuApp:
         self.output_text.insert(tk.END, f"Preview:\n{beer['brewery']} {beer['name']} {beer['abv']}% {beer['style']}\n{description}\n\n")
 
     def add_beer(self):
-        if not hasattr(self, 'current_preview'):
+        if not self.current_preview:
             messagebox.showerror("Error", "Please preview a beer first.")
             return
 
@@ -184,6 +201,10 @@ class BeerMenuApp:
         description = f"\"{container_choice} {beer['abv']}% abv {beer['style']}\n{beer['description']}\""
         description = description[:997]
 
+        if full_name in self.added_names:
+            messagebox.showinfo("Duplicate", f"{full_name} has already been added.")
+            return
+
         row = {
             'Name': full_name,
             'Price': user_price,
@@ -195,8 +216,27 @@ class BeerMenuApp:
             'PLU': ''
         }
 
+        self.added_names.add(full_name)
+        display = f"{full_name} - ${user_price:.2f}"
+        self.added_listbox.insert(tk.END, display)
         self.beer_entries.append(row)
         self.output_text.insert(tk.END, f"Added: {full_name} at ${user_price:.2f}\n\n")
+
+    def remove_selected_entry(self):
+        selection = self.added_listbox.curselection()
+        if not selection:
+            messagebox.showinfo("No Selection", "Select an beer to remove.")
+            return
+        
+        index = selection[0]
+        entry = self.added_listbox.get(index)
+        name = entry.rsplit(" - $", 1)[0]
+        self.added_listbox.delete(index)
+
+        self.beer_entries = [row for row in self.beer_entries if row['Name'] != name]
+        self.added_names.discard(name)
+
+        self.output_text.insert(tk.END, f"Removed: {name}\n\n")
 
     def save_to_csv(self):
         if not self.beer_entries:
